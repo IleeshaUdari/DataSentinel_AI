@@ -1,0 +1,47 @@
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: datasentinel
+      POSTGRES_PASSWORD: datasentinel_dev
+      POSTGRES_DB: datasentinel
+
+    ports:
+      - "127.0.0.1:5434:5432"
+
+    volumes:
+      - datasentinel_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U datasentinel -d datasentinel
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    working_dir: /app
+
+    environment:
+      DATABASE_URL: postgresql+psycopg://datasentinel:datasentinel_dev@postgres:5432/datasentinel
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - ./data:/app/data
+
+    profiles:
+      - tools
+
+volumes:
+  datasentinel_pgdata:
